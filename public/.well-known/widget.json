@@ -1,0 +1,16 @@
+{
+  "pubkey": "a95bc334146023ea109af166773f7c93ff166d0f243d7388123a5e5b2393a2a3",
+  "widget": {
+    "title": "Event Horizon | Schedule and Join Events",
+    "appUrl": "https://event-horizon.vercel.app/",
+    "iconUrl": "https://event-horizon.vercel.app/event-horizon-logo.png",
+    "imageUrl": "https://event-horizon.vercel.app/event-horizon-logo.png",
+    "buttonTitle": "Create and Schedule",
+    "tags": [
+      "nostr",
+      "nip-52",
+      "calendar events",
+      "geotags"
+    ]
+  }
+}

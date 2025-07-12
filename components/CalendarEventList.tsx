@@ -6,7 +6,7 @@ import {
     CardFooter,
     CardHeader
 } from "@heroui/card";
-import { fetchRSVPs } from '@/lib/utils';
+import { fetchRSVPs, fetchAllEvents, fetchUserEvents, fetchUserRSVPEvents } from '@/lib/utils';
 import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
@@ -17,6 +17,7 @@ import { Divider } from "@heroui/divider";
 import { User } from "@heroui/user";
 import { parseCalendarEvent, parseRSVPEvent } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
+import { Switch } from "@heroui/switch";
 import { user } from '@heroui/theme';
 
 //keeping this deterministic because I dont want to make another user metadata request to relays and slow down.
@@ -51,7 +52,6 @@ const LocationIcon = (props: any) => (
 );
 
 interface CalendarEventListProps {
-    fetcherFunction: any
     isUserView: boolean;
     viewingPubkey?: string;
     loggedInUserPubkey: string;
@@ -59,11 +59,12 @@ interface CalendarEventListProps {
 }
 
 
-const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedInUserPubkey, publishNostrEvent }: CalendarEventListProps) => {
+const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publishNostrEvent }: CalendarEventListProps) => {
     const [events, setEvents] = useState<any[]>();
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
     const [rsvps, setRsvps] = useState<any[]>([]);
+    const [viewOnlyRsvps, setViewOnlyRsvps] = useState<boolean>(false);
 
     const [isRsvping, setIsRsvping] = useState(false);
     const [rsvpError, setRsvpError] = useState<string | null>(null);
@@ -146,15 +147,21 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
     useEffect(() => {
         const loadAndParseEvents = async () => {
             try {
+                setLoading(true);
                 const callback = (rawEvents: any) => {
                     const parsed = rawEvents.map(parseCalendarEvent);
                     setEvents(parsed);
                 };
 
                 if (isUserView && viewingPubkey) {
-                    await fetcherFunction(viewingPubkey, callback);
+                    if(!viewOnlyRsvps)
+                    {
+                        await fetchUserEvents(viewingPubkey, callback);
+                    } else {
+                        await fetchUserRSVPEvents(viewingPubkey, callback);
+                    }
                 } else {
-                    await fetcherFunction(callback);
+                    await fetchAllEvents(callback);
                 }
             } catch (err) {
                 console.error("Failed during event fetch or processing:", err);
@@ -164,16 +171,27 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
             }
         };
         loadAndParseEvents();
-    }, [isUserView, viewingPubkey, fetcherFunction]);
+    }, [isUserView, viewingPubkey, viewOnlyRsvps]);
 
     const handleCardPress = (event: any) => {
         setSelectedEvent(event);
         onOpen();
     };
 
+    const TitleComponent = () => {
+        return (
+        isUserView ?
+                <div className='flex justify-between mb-6 w-full'>
+                    <h1 className="text-4xl font-bold text-foreground">{viewOnlyRsvps ? "My Created RSVPs" :"My Created Events" }</h1>
+                    <Switch isSelected={viewOnlyRsvps} onValueChange={setViewOnlyRsvps} />
+                </div> : <h1 className='text-4xl font-bold mb-6 text-foreground'>Upcoming Events</h1>
+        )
+    }
+
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
+            <div className="flex flex-col mb-6 p-4 items-center min-h-screen">
+                <TitleComponent />
                 <Spinner label="Contacting Nostr Relays..." color="primary" labelColor="primary" size="lg" />
             </div>
         );
@@ -198,7 +216,12 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
 
     return (
         <div className="container mx-auto p-4 sm:p-8">
-            <h1 className="text-4xl font-bold mb-8 text-foreground">{isUserView ? "My Created Events" : "Upcoming Events"}</h1>
+            {isUserView ?
+                <div className='flex justify-between mb-6 w-full'>
+                    <h1 className="text-4xl font-bold text-foreground">{viewOnlyRsvps ? "My Created RSVPs" :"My Created Events" }</h1>
+                    <Switch isSelected={viewOnlyRsvps} onValueChange={setViewOnlyRsvps} />
+                </div> : <h1 className='text-4xl font-bold mb-6 text-foreground'>Upcoming Events</h1>
+            }
             {events && events.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {events.map((event) => (
@@ -323,14 +346,14 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
                                                                         {rsvps.map(rsvp => (
                                                                             <div key={rsvp.id} className="flex justify-between items-center">
                                                                                 <Tooltip content={rsvp.pubkey} placement="top-start" delay={0} closeDelay={0}>
-                                                                                <User
-                                                                                    name={rsvp.pubkey.substring(0, 10) + '...'}
-                                                                                    description={rsvp.content || rsvp.status}
-                                                                                    avatarProps={{
-                                                                                        src: getAvatarUrl(rsvp.pubkey)
-                                                                                    }}
+                                                                                    <User
+                                                                                        name={rsvp.pubkey.substring(0, 10) + '...'}
+                                                                                        description={rsvp.content || rsvp.status}
+                                                                                        avatarProps={{
+                                                                                            src: getAvatarUrl(rsvp.pubkey)
+                                                                                        }}
                                                                                     />
-                                                                                    </Tooltip>
+                                                                                </Tooltip>
                                                                                 <Chip
                                                                                     size="sm"
                                                                                     variant="flat"

@@ -41,13 +41,13 @@ export default function Home() {
       />
       <Tabs aria-label="Options">
         <Tab key="View" title="View">
-          <CalendarEventList fetcherFunction={fetchAllEvents} isUserView={false} loggedInUserPubkey={user? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
+          <CalendarEventList isUserView={false} loggedInUserPubkey={user? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
         </Tab>
         <Tab key="Create" title="Create">
           <CreateCalendarEventForm publishNostrEvent={publishNostrEvent} pubkey={user? user.pubkey: ""}/>
         </Tab>
-        <Tab key="My Events" title="My Events">
-          <CalendarEventList fetcherFunction={fetchUserEvents} isUserView={true} loggedInUserPubkey={user? user.pubkey: ""} viewingPubkey={user ? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
+        <Tab key="My Events/RSVPs" title="My Events/RSVPs">
+          <CalendarEventList isUserView={true} loggedInUserPubkey={user? user.pubkey: ""} viewingPubkey={user ? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
         </Tab>
       </Tabs>
     </section>

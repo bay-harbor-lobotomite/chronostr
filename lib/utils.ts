@@ -1,4 +1,4 @@
-import {Client, Filter, Kind, KindStandard, Event, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions, SingleLetterTag, Alphabet} from "@rust-nostr/nostr-sdk";
+import {Client, Filter, Kind, KindStandard, Event, EventId, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions, SingleLetterTag, Alphabet} from "@rust-nostr/nostr-sdk";
 import {relays, eventKinds, rsvpKind} from "./constants";
 
 
@@ -18,6 +18,30 @@ export async function fetchRSVPs(eventId: string, callback: any) {
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
     console.log(eventsVecJson);
     callback(eventsVecJson);
+}
+
+export async function fetchUserRSVPEvents(pubkey: string, callback: any) {
+    await loadWasmAsync();  
+    let client = new Client();
+    for (const relay of relays) {
+        await client.addRelay(relay)
+    }
+    await client.connect();
+    //get rsvps
+    let filterRsvp = new Filter().kind(new Kind(rsvpKind)).author(PublicKey.parse(pubkey))
+    const events1 = await client.fetchEvents(filterRsvp, Duration.fromSecs(10));
+    let eventsVec = events1.toVec();
+    let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
+    console.log(eventsVecJson);
+
+    //now fetch the events for which the user has RSVPed
+    let parsedRsvpEvents = eventsVecJson.map((event) => parseRSVPEvent(event));
+    let filterEvents = new Filter().kinds(eventKinds.map((kind) => new Kind(kind))).ids(parsedRsvpEvents.map((rsvp) => EventId.parse(rsvp.e)));
+    const events2 = await client.fetchEvents(filterEvents, Duration.fromSecs(10));
+    let eventsVec2 = events2.toVec();
+    let eventsVecJson2 = eventsVec2.map((event) => JSON.parse(event.asJson()))
+    console.log(eventsVecJson2);
+    callback(eventsVecJson2)
 }
 
 export async function fetchAllEvents(callback: (events: any) => void) {

@@ -365,7 +365,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                                                                         ))}
                                                                     </div>
                                                                 ) : (
-                                                                    <p className="text-default-500 text-sm h-40 flex justify-center items-center">No one has RSVP'd yet.</p>
+                                                                    <p className="text-default-500 text-sm h-40 flex justify-center items-center">No one has RSVPd yet.</p>
                                                                 )}
                                                             </div>
                                                         </PopoverContent>

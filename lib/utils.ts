@@ -1,7 +1,26 @@
-import {Client, Filter, Kind, KindStandard, Event, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions} from "@rust-nostr/nostr-sdk";
-import {relays, eventKinds} from "./constants";
+import {Client, Filter, Kind, KindStandard, Event, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions, SingleLetterTag, Alphabet} from "@rust-nostr/nostr-sdk";
+import {relays, eventKinds, rsvpKind} from "./constants";
 
-export async function fetchAllEvents(setEvents: (events: any) => void) {
+
+export async function fetchRSVPs(eventId: string, callback: any) {
+    await loadWasmAsync();
+    let client = new Client();
+    for (const relay of relays) {
+        await client.addRelay(relay)
+    }
+    await client.connect();
+
+    //get rsvps
+    const tg = SingleLetterTag.lowercase(Alphabet.E);
+    let filter = new Filter().kind(new Kind(rsvpKind)).customTag(tg, eventId)
+    const events1 = await client.fetchEvents(filter, Duration.fromSecs(10));
+    let eventsVec = events1.toVec();
+    let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
+    console.log(eventsVecJson);
+    callback(eventsVecJson);
+}
+
+export async function fetchAllEvents(callback: (events: any) => void) {
     await loadWasmAsync();
 
     let client = new Client();
@@ -16,10 +35,10 @@ export async function fetchAllEvents(setEvents: (events: any) => void) {
     const events1 = await client.fetchEvents(filter1, Duration.fromSecs(10));
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
-    setEvents(eventsVecJson);
+    callback(eventsVecJson);
 }
 
-export async function fetchUserEvents(pubkey: string, setEvents: (events: any) => void) {
+export async function fetchUserEvents(pubkey: string, callback: (events: any) => void) {
     await loadWasmAsync();
 
     let client = new Client();
@@ -35,7 +54,7 @@ export async function fetchUserEvents(pubkey: string, setEvents: (events: any) =
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
     console.log(eventsVecJson);
-    setEvents(eventsVecJson);
+    callback(eventsVecJson);
 }
 export function parseCalendarEvent(eventJson: any) {
     const parsed = {

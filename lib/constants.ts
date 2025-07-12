@@ -5,3 +5,4 @@ export const relays = [
 ]
 
 export const eventKinds = [31922, 31923]
+export const rsvpKind = 31925

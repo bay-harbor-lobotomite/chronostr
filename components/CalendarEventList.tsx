@@ -6,15 +6,21 @@ import {
     CardFooter,
     CardHeader
 } from "@heroui/card";
+import { fetchRSVPs } from '@/lib/utils';
 import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
+import { Tooltip } from "@heroui/tooltip";
 import { Spinner } from "@heroui/spinner";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
-import { parseCalendarEvent } from '@/lib/utils';
+import { User } from "@heroui/user";
+import { parseCalendarEvent, parseRSVPEvent } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
 import { user } from '@heroui/theme';
+
+//keeping this deterministic because I dont want to make another user metadata request to relays and slow down.
+const getAvatarUrl = (pubkey: string) => `https://api.boringavatars.com/beam/120/${pubkey}?colors=264653,2a9d8f,e9c46a,f4a261,e76f51`;
 
 
 const formatEventDate = (event: any) => {
@@ -57,6 +63,7 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
     const [events, setEvents] = useState<any[]>();
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
+    const [rsvps, setRsvps] = useState<any[]>([]);
 
     const [isRsvping, setIsRsvping] = useState(false);
     const [rsvpError, setRsvpError] = useState<string | null>(null);
@@ -64,6 +71,10 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
 
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const { isOpen, onOpen, onClose: originalOnClose } = useDisclosure();
+
+    const [isFetchingRsvps, setIsFetchingRsvps] = useState(false);
+    const [fetchRsvpsError, setFetchRsvpsError] = useState<string | null>(null);
+    const [isRsvpPopoverOpen, setIsRsvpPopoverOpen] = useState(false);
 
     const onClose = () => {
         originalOnClose();
@@ -120,6 +131,19 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
     };
 
     useEffect(() => {
+        const loadRSVPEvents = async () => {
+            if (selectedEvent) {
+                const callback = (rawEvents: any) => {
+                    const parsed = rawEvents.map(parseRSVPEvent);
+                    setRsvps(parsed);
+                }
+                await fetchRSVPs(selectedEvent?.id, callback)
+            }
+        }
+        loadRSVPEvents();
+    }, [selectedEvent]);
+
+    useEffect(() => {
         const loadAndParseEvents = async () => {
             try {
                 const callback = (rawEvents: any) => {
@@ -161,6 +185,15 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
                 <p className="text-danger-500 text-lg">{error}</p>
             </div>
         );
+    }
+
+    const getStatusChipColor = (status: string): "success" | "warning" | "danger" | "default" => {
+        switch (status) {
+            case 'accepted': return 'success';
+            case 'tentative': return 'warning';
+            case 'declined': return 'danger';
+            default: return 'default';
+        }
     }
 
     return (
@@ -218,7 +251,7 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
             <Modal
                 isOpen={isOpen}
                 onClose={onClose}
-                size="2xl"
+                size="xl"
                 scrollBehavior="inside"
                 placement="center">
                 <ModalContent>
@@ -227,19 +260,11 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
                             {selectedEvent && (
                                 <>
                                     <ModalHeader className="flex flex-col gap-1 text-2xl">
-                                        <Popover placement="top-start">
-                                            <PopoverTrigger>
-                                                <h2 className="text-2xl font-bold truncate pr-6" title={selectedEvent.title}>
-                                                    {selectedEvent.title}
-                                                </h2>
-                                            </PopoverTrigger>
-                                            <PopoverContent>
-                                                <div className="px-1 py-2">
-                                                    <div className="text-small font-bold">Full Title</div>
-                                                    <div className="text-tiny">{selectedEvent.title}</div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>                                    </ModalHeader>
+                                        <Tooltip content={selectedEvent.title} placement="top-start" delay={0} closeDelay={0}>
+                                            <h2 className="text-2xl font-bold truncate pr-6">
+                                                {selectedEvent.title}
+                                            </h2>
+                                        </Tooltip>                                  </ModalHeader>
                                     <ModalBody className='max-h-[75vh] overflow-y-auto'>
                                         <Image
                                             removeWrapper
@@ -255,19 +280,12 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
                                         {selectedEvent.location && (
                                             <div className="flex items-center text-sm text-default-500 mt-4">
                                                 <LocationIcon className="mr-2" />
-                                                <Popover placement="bottom-start">
-                                                    <PopoverTrigger>
-                                                        <span className="truncate" title={selectedEvent.location}>
-                                                            {selectedEvent.location}
-                                                        </span>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent>
-                                                        <div className="px-1 py-2">
-                                                            <div className="text-small font-bold">Full Location</div>
-                                                            <div className="text-tiny">{selectedEvent.location}</div>
-                                                        </div>
-                                                    </PopoverContent>
-                                                </Popover>                                            </div>
+                                                <Tooltip content={selectedEvent.location} placement="top-start" delay={0} closeDelay={0}>
+                                                    <span className="truncate">
+                                                        {selectedEvent.location}
+                                                    </span>
+                                                </Tooltip>
+                                            </div>
                                         )}
                                         <div className="flex flex-wrap gap-2 mt-4">
                                             {selectedEvent.hashtags.map((tag: any, index: any) => (
@@ -285,7 +303,50 @@ const CalendarEventList = ({ fetcherFunction, isUserView, viewingPubkey, loggedI
                                                 </Button>
 
                                                 {selectedEvent.pubkey === loggedInUserPubkey ? (
-                                                    <Button color="primary" variant="flat">View RSVPs</Button>
+                                                    <Popover isOpen={isRsvpPopoverOpen} onOpenChange={setIsRsvpPopoverOpen} placement="top-end" showArrow>
+                                                        <PopoverTrigger>
+                                                            <Button color="primary" variant="flat">
+                                                                View RSVPs
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="p-4 w-[340px]">
+                                                            <div className="flex flex-col gap-4">
+                                                                <h4 className="text-lg font-bold">Attendees</h4>
+                                                                {isFetchingRsvps ? (
+                                                                    <div className="flex justify-center items-center h-40">
+                                                                        <Spinner label="Fetching RSVPs..." />
+                                                                    </div>
+                                                                ) : fetchRsvpsError ? (
+                                                                    <p className="text-danger text-sm">{fetchRsvpsError}</p>
+                                                                ) : rsvps.length > 0 ? (
+                                                                    <div className="max-h-64 overflow-y-auto pr-2 flex flex-col gap-4">
+                                                                        {rsvps.map(rsvp => (
+                                                                            <div key={rsvp.id} className="flex justify-between items-center">
+                                                                                <Tooltip content={rsvp.pubkey} placement="top-start" delay={0} closeDelay={0}>
+                                                                                <User
+                                                                                    name={rsvp.pubkey.substring(0, 10) + '...'}
+                                                                                    description={rsvp.content || rsvp.status}
+                                                                                    avatarProps={{
+                                                                                        src: getAvatarUrl(rsvp.pubkey)
+                                                                                    }}
+                                                                                    />
+                                                                                    </Tooltip>
+                                                                                <Chip
+                                                                                    size="sm"
+                                                                                    variant="flat"
+                                                                                    color={getStatusChipColor(rsvp.status)}
+                                                                                >
+                                                                                    {rsvp.status}
+                                                                                </Chip>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-default-500 text-sm h-40 flex justify-center items-center">No one has RSVP'd yet.</p>
+                                                                )}
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Popover>
                                                 ) : (
                                                     <div className="flex gap-2">
                                                         <Button color="success" variant="solid" onPress={() => handleRsvpSubmit('accepted')}>Accept</Button>

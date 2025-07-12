@@ -1,4 +1,4 @@
-import {Client, Filter, Kind, KindStandard, Event, PublicKey, Duration, loadWasmAsync, Keys} from "@rust-nostr/nostr-sdk";
+import {Client, Filter, Kind, KindStandard, Event, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions} from "@rust-nostr/nostr-sdk";
 import {relays, eventKinds} from "./constants";
 
 export async function fetchAllEvents(setEvents: (events: any) => void) {
@@ -12,7 +12,7 @@ export async function fetchAllEvents(setEvents: (events: any) => void) {
     await client.connect();
 
     //get calendar events
-    let filter1 = new Filter().kinds(eventKinds.map((kind) => new Kind(kind) )).limit(20);
+    let filter1 = new Filter().kinds(eventKinds.map((kind) => new Kind(kind))).since(Timestamp.fromSecs(Date.now() / 1000 - 60 * 60 * 24 * 30)).limit(20); // last 30 days
     const events1 = await client.fetchEvents(filter1, Duration.fromSecs(10));
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
@@ -37,7 +37,7 @@ export async function fetchUserEvents(pubkey: string, setEvents: (events: any) =
     console.log(eventsVecJson);
     setEvents(eventsVecJson);
 }
-export function parseNostrEvent(eventJson: any) {
+export function parseCalendarEvent(eventJson: any) {
     const parsed = {
         id: eventJson.id,
         pubkey: eventJson.pubkey,
@@ -48,6 +48,7 @@ export function parseNostrEvent(eventJson: any) {
         summary: '',
         start: null,
         end: null,
+        d: "",
         location: '',
         image: '',
         hashtags: Array<any>(), // 't' tags can be repeated
@@ -74,11 +75,51 @@ export function parseNostrEvent(eventJson: any) {
     parsed.end = tagMap.get('end');
     parsed.location = tagMap.get('location');
     parsed.image = tagMap.get('image');
+    parsed.d = tagMap.get('d') || '';
     
     const hashtags = tagMap.get('t');
     if (hashtags) {
         parsed.hashtags = Array.isArray(hashtags) ? hashtags : [hashtags];
     }
+
+    return parsed;
+}
+export function parseRSVPEvent(eventJson: any) {
+    const parsed = {
+        id: eventJson.id,
+        pubkey: eventJson.pubkey,
+        createdAt: eventJson.created_at,
+        kind: eventJson.kind,
+        content: eventJson.content,
+        e: '',
+        a: '',
+        d: "",
+        status: '',
+        fb: '',
+        p: ''
+    };
+
+    const tagMap = new Map();
+    for (const tag of eventJson.tags) {
+        const [key, value] = tag;
+        if (tagMap.has(key)) {
+            const existing = tagMap.get(key);
+            if (Array.isArray(existing)) {
+                existing.push(value);
+            } else {
+                tagMap.set(key, [existing, value]);
+            }
+        } else {
+            tagMap.set(key, value);
+        }
+    }
+
+    parsed.e = tagMap.get('e') || '';
+    parsed.a = tagMap.get('a') || ''; 
+    parsed.status = tagMap.get('status') || '';
+    parsed.fb = tagMap.get('fb') || '';
+    parsed.p = tagMap.get('p') || '';
+    parsed.d = tagMap.get('d') || '';
 
     return parsed;
 }

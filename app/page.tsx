@@ -4,7 +4,7 @@ import SWHandler from 'smart-widget-handler'
 import { useEffect, useState } from "react";
 import {Tab, Tabs} from "@heroui/tabs";
 import { fetchAllEvents, fetchUserEvents } from "@/lib/utils";
-import CalendarEventList from "@/components/CalendarList";
+import CalendarEventList from "@/components/CalendarEventList";
 import CreateCalendarEventForm from "@/components/CreateCalendarEventForm";
 
 export default function Home() {
@@ -41,13 +41,13 @@ export default function Home() {
       />
       <Tabs aria-label="Options">
         <Tab key="View" title="View">
-          <CalendarEventList fetcherFunction={fetchAllEvents} isUser={false}/>
+          <CalendarEventList fetcherFunction={fetchAllEvents} isUserView={false} loggedInUserPubkey={user? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
         </Tab>
         <Tab key="Create" title="Create">
           <CreateCalendarEventForm publishNostrEvent={publishNostrEvent} pubkey={user? user.pubkey: ""}/>
         </Tab>
         <Tab key="My Events" title="My Events">
-          <CalendarEventList fetcherFunction={fetchUserEvents} isUser={true} pubkey={user? user.pubkey: ""}/>
+          <CalendarEventList fetcherFunction={fetchUserEvents} isUserView={true} loggedInUserPubkey={user? user.pubkey: ""} viewingPubkey={user ? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
         </Tab>
       </Tabs>
     </section>

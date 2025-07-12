@@ -7,16 +7,19 @@ import {
 } from "@heroui/card";
 import { getSHA256Hash } from '@/lib/utils';
 import { Input, Textarea } from '@heroui/input';
-import {Radio, RadioGroup} from '@heroui/radio';
-import {Spinner} from '@heroui/spinner'
+import { Radio, RadioGroup } from '@heroui/radio';
+import { Spinner } from '@heroui/spinner'
+import { Chip } from '@heroui/chip';
 import { Divider } from '@heroui/divider';
 import { Button } from '@heroui/button';
 
 
-const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, publishNostrEvent: any}) => {
+const CreateCalendarEventForm = ({ pubkey, publishNostrEvent }: { pubkey: string, publishNostrEvent: any }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
+    const [participants, setParticipants] = useState<{ pubkey: string; role: string }[]>([]);
+    const [participantInput, setParticipantInput] = useState({ pubkey: '', role: '' });
 
     const [formData, setFormData] = useState({
         eventType: 'time', // 'time' or 'date'
@@ -43,7 +46,26 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
-    
+
+    const handleParticipantInputChange = (e: any) => {
+        const { name, value } = e.target;
+        setParticipantInput(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAddParticipant = () => {
+        if (participantInput.pubkey.trim() && !participants.some(p => p.pubkey === participantInput.pubkey)) {
+            setParticipants(prev => [...prev, {
+                pubkey: participantInput.pubkey.trim(),
+                role: participantInput.role.trim() || 'attendee'
+            }]);
+            setParticipantInput({ pubkey: '', role: '' });
+        }
+    };
+
+    const handleRemoveParticipant = (pubkeyToRemove: string) => {
+        setParticipants(prev => prev.filter(p => p.pubkey !== pubkeyToRemove));
+    };
+
     const handleEventTypeChange = (value: any) => {
         setFormData(prev => ({ ...prev, eventType: value }));
     };
@@ -56,15 +78,22 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
 
         try {
             const tags = [];
-            
+
             if (formData.title) tags.push(['title', formData.title]);
             if (formData.summary) tags.push(['summary', formData.summary]);
             if (formData.location) tags.push(['location', formData.location]);
             if (formData.image) tags.push(['image', formData.image]);
-            
+
             if (formData.hashtags) {
                 formData.hashtags.split(',').forEach(tag => {
                     if (tag.trim()) tags.push(['t', tag.trim()]);
+                });
+            }
+
+            if (participants.length > 0) {
+                participants.forEach(p => {
+                    // Format: ["p", <pubkey>, <role>] - omitting optional relay URL
+                    tags.push(['p', p.pubkey, p.role]);
                 });
             }
 
@@ -85,12 +114,12 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                     tags.push(['end_tzid', formData.timeZone]);
                 }
 
-            } else { 
+            } else {
                 kind = 31922;
                 if (formData.startDate) tags.push(['start', formData.startDate]);
                 if (formData.endDate) tags.push(['end', formData.endDate]);
             }
-            
+
             tags.push(['d', Math.random().toString(36).substring(2, 10)]);
 
             const nostrEventObject = {
@@ -119,14 +148,13 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
     };
 
     return (
-        <Card className="max-w-3xl mx-auto" shadow="lg">
+        <Card className="max-w-screen mx-auto" shadow="lg">
             <CardHeader className="p-6">
                 <h2 className="text-2xl font-bold text-foreground">Create a New Calendar Event</h2>
             </CardHeader>
             <Divider />
             <form onSubmit={handleSubmit}>
                 <CardBody className="p-6 gap-6">
-                    {/* Event Type Switcher */}
                     <RadioGroup
                         label="Event Type"
                         orientation="horizontal"
@@ -137,7 +165,6 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                         <Radio value="date">Date-based (All-Day)</Radio>
                     </RadioGroup>
 
-                    {/* Common Fields */}
                     <Input
                         isRequired
                         name="title"
@@ -154,10 +181,9 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                         onChange={handleInputChange}
                     />
 
-                    {/* Dynamic Fields based on Event Type */}
                     {formData.eventType === 'time' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <Input
+                            <Input
                                 isRequired
                                 name="startDate"
                                 label="Start Date"
@@ -180,7 +206,7 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                                 value={formData.endDate}
                                 onChange={handleInputChange}
                             />
-                             <Input
+                            <Input
                                 name="endTime"
                                 label="End Time (Optional)"
                                 type="time"
@@ -197,7 +223,7 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                             />
                         </div>
                     ) : (
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <Input
                                 isRequired
                                 name="startDate"
@@ -215,10 +241,9 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                             />
                         </div>
                     )}
-                    
-                    <Divider className="my-2"/>
 
-                     {/* Optional Fields */}
+                    <Divider className="my-2" />
+
                     <Input
                         name="location"
                         label="Location (Optional)"
@@ -241,11 +266,52 @@ const CreateCalendarEventForm = ({pubkey, publishNostrEvent}: {pubkey: string, p
                         value={formData.hashtags}
                         onChange={handleInputChange}
                     />
+                    <Divider className="my-2" />
+                    <div className="flex flex-col gap-4">
+                        <h3 className="text-lg font-semibold text-foreground">Invite Participants (Optional)</h3>
+                        <div className="flex flex-col sm:flex-row items-end gap-2">
+                            <Input
+                                name="pubkey"
+                                label="Participant Pubkey"
+                                placeholder="Enter a npub or hex public key"
+                                value={participantInput.pubkey}
+                                onChange={handleParticipantInputChange}
+                                className="flex-grow"
+                            />
+                            <Input
+                                name="role"
+                                label="Role"
+                                placeholder="e.g., speaker, host"
+                                value={participantInput.role}
+                                onChange={handleParticipantInputChange}
+                                className="w-full sm:w-48"
+                            />
+                            <Button
+                                onPress={handleAddParticipant}
+                                color="primary"
+                                variant="flat"
+                                className="w-full sm:w-auto"
+                            >
+                                Add Participant
+                            </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            {participants.map((p) => (
+                                <Chip
+                                    key={p.pubkey}
+                                    onClose={() => handleRemoveParticipant(p.pubkey)}
+                                    variant="flat"
+                                >
+                                    {`${p.pubkey.substring(0, 10)}... (${p.role})`}
+                                </Chip>
+                            ))}
+                        </div>
+                    </div>
                 </CardBody>
                 <Divider />
                 <CardFooter className="p-6 flex-col items-start">
-                     <Button 
-                        color="primary" 
+                    <Button
+                        color="primary"
                         type="submit"
                         isLoading={isSubmitting}
                         fullWidth

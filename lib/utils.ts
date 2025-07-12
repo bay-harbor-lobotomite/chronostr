@@ -87,23 +87,30 @@ export function parseCalendarEvent(eventJson: any) {
         createdAt: eventJson.created_at,
         kind: eventJson.kind,
         content: eventJson.content,
+        d: "",
         title: '',
         summary: '',
         start: null,
         end: null,
-        d: "",
         location: '',
         image: '',
-        hashtags: Array<any>(), // 't' tags can be repeated
+        hashtags: Array<string>(),
+        participants: Array<{ pubkey: string, role: string }>(),
     };
 
-    const tagMap = new Map();
+    if (!eventJson.tags || !Array.isArray(eventJson.tags)) {
+        return parsed; 
+    }
+
+    const tagMap = new Map<string, any>();
     for (const tag of eventJson.tags) {
-        const [key, value] = tag;
+        const key = tag[0];
+        const value = tag.slice(1); 
+
         if (tagMap.has(key)) {
             const existing = tagMap.get(key);
-            if (Array.isArray(existing)) {
-                existing.push(value);
+            if (Array.isArray(existing[0])) {
+                tagMap.set(key, [...existing, value]);
             } else {
                 tagMap.set(key, [existing, value]);
             }
@@ -112,19 +119,39 @@ export function parseCalendarEvent(eventJson: any) {
         }
     }
 
-    parsed.title = tagMap.get('title') || 'Untitled Event';
-    parsed.summary = tagMap.get('summary') || parsed.content; // Fallback to content
-    parsed.start = tagMap.get('start');
-    parsed.end = tagMap.get('end');
-    parsed.location = tagMap.get('location');
-    parsed.image = tagMap.get('image');
-    parsed.d = tagMap.get('d') || '';
+    parsed.d = tagMap.get('d')?.[0] || '';
+    parsed.title = tagMap.get('title')?.[0] || 'Untitled Event';
+    parsed.summary = tagMap.get('summary')?.[0] || parsed.content;
+    parsed.start = tagMap.get('start')?.[0] || null;
+    parsed.end = tagMap.get('end')?.[0] || null;
+    parsed.location = tagMap.get('location')?.[0] || '';
+    parsed.image = tagMap.get('image')?.[0] || '';
     
     const hashtags = tagMap.get('t');
     if (hashtags) {
-        parsed.hashtags = Array.isArray(hashtags) ? hashtags : [hashtags];
+        parsed.hashtags = hashtags.flat();
     }
 
+    const participantsData = tagMap.get('p');
+    if (participantsData) {
+        const participantsArray = (participantsData.length > 0 && Array.isArray(participantsData[0]))
+            ? participantsData
+            : [participantsData];
+
+        for (const pTag of participantsArray) {
+            if (pTag && pTag[0]) {
+                const participant = {
+                    pubkey: pTag[0],
+                    role: ''
+                };
+                if (pTag.length >= 2) {
+                    participant.role = pTag[pTag.length - 1];
+                }
+                
+                parsed.participants.push(participant);
+            }
+        }
+    }
     return parsed;
 }
 export function parseRSVPEvent(eventJson: any) {

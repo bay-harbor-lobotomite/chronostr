@@ -6,6 +6,7 @@ import {Tab, Tabs} from "@heroui/tabs";
 import { fetchAllEvents, fetchUserEvents } from "@/lib/utils";
 import CalendarEventList from "@/components/CalendarEventList";
 import CreateCalendarEventForm from "@/components/CreateCalendarEventForm";
+import Calendars from "@/components/Calendars";
 
 export default function Home() {
   const [user, setUser] = useState<any>()
@@ -31,7 +32,7 @@ export default function Home() {
       }
   };
   return (
-    <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
+    <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10 max-w-screen">
       <User 
       avatarProps={{
         src: user ? user.banner : ""
@@ -39,15 +40,18 @@ export default function Home() {
       name={user ? user.name : "Loading..."}
       description={user ? `${user.pubkey.slice(0, 8)}...${user.pubkey.slice(-4)}` : "Loading..."}
       />
-      <Tabs aria-label="Options">
-        <Tab key="View" title="View">
+      <Tabs aria-label="Options" size="sm" className="max-w-screen">
+        <Tab key="Explore" title="Explore">
           <CalendarEventList isUserView={false} loggedInUserPubkey={user? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
         </Tab>
-        <Tab key="Create" title="Create">
+        <Tab key="Events/RSVPs" title="Events/RSVPs">
+          <CalendarEventList isUserView={true} loggedInUserPubkey={user? user.pubkey: ""} viewingPubkey={user ? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
+        </Tab>
+        <Tab key="Create Events" title="+ Events">
           <CreateCalendarEventForm publishNostrEvent={publishNostrEvent} pubkey={user? user.pubkey: ""}/>
         </Tab>
-        <Tab key="My Events/RSVPs" title="My Events/RSVPs">
-          <CalendarEventList isUserView={true} loggedInUserPubkey={user? user.pubkey: ""} viewingPubkey={user ? user.pubkey : ""} publishNostrEvent={publishNostrEvent}/>
+        <Tab key="Create Calendar" title="+ Calendar">
+          <Calendars loggedInUserPubkey={user? user.pubkey: ""} publishNostrEvent={publishNostrEvent} />
         </Tab>
       </Tabs>
     </section>

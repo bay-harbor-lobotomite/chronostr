@@ -154,8 +154,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                 };
 
                 if (isUserView && viewingPubkey) {
-                    if(!viewOnlyRsvps)
-                    {
+                    if (!viewOnlyRsvps) {
                         await fetchUserEvents(viewingPubkey, callback);
                     } else {
                         await fetchUserRSVPEvents(viewingPubkey, callback);
@@ -180,11 +179,11 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
 
     const TitleComponent = () => {
         return (
-        isUserView ?
+            isUserView ?
                 <div className='flex justify-between mb-6 w-full'>
-                    <h1 className="text-4xl font-bold text-foreground">{viewOnlyRsvps ? "My Created RSVPs" :"My Created Events" }</h1>
+                    <h2 className="text-4xl font-bold text-foreground">{viewOnlyRsvps ? "My Created RSVPs" : "My Created Events"}</h2>
                     <Switch isSelected={viewOnlyRsvps} onValueChange={setViewOnlyRsvps} />
-                </div> : <h1 className='text-4xl font-bold mb-6 text-foreground'>Upcoming Events</h1>
+                </div> : <h2 className='text-4xl font-bold mb-6 w-full text-foreground'>Upcoming Events</h2>
         )
     }
 
@@ -216,12 +215,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
 
     return (
         <div className="container mx-auto p-4 sm:p-8">
-            {isUserView ?
-                <div className='flex justify-between mb-6 w-full'>
-                    <h1 className="text-4xl font-bold text-foreground">{viewOnlyRsvps ? "My Created RSVPs" :"My Created Events" }</h1>
-                    <Switch isSelected={viewOnlyRsvps} onValueChange={setViewOnlyRsvps} />
-                </div> : <h1 className='text-4xl font-bold mb-6 text-foreground'>Upcoming Events</h1>
-            }
+            <TitleComponent />
             {events && events.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {events.map((event) => (
@@ -315,6 +309,25 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                                                 <Chip key={index} color="default" variant="flat" size="sm">#{tag}</Chip>
                                             ))}
                                         </div>
+                                        {selectedEvent.participants && selectedEvent.participants.length > 0 && (
+                                            <>
+                                                <Divider className="my-4" />
+                                                <h3 className="text-lg font-semibold text-foreground mb-2">Participants</h3>
+                                                <div className="flex flex-col gap-3 max-h-52 overflow-y-auto pr-2">
+                                                    {selectedEvent.participants.map((participant: any) => (
+                                                        <Tooltip key={participant.pubkey} content={participant.pubkey} placement="top-start" delay={0} closeDelay={0}>
+                                                            <User
+                                                                name={participant.pubkey.substring(0, 10) + '...'}
+                                                                description={participant.role || 'Attendee'} // Use a default role
+                                                                avatarProps={{
+                                                                    src: getAvatarUrl(participant.pubkey)
+                                                                }}
+                                                            />
+                                                        </Tooltip>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
                                     </ModalBody>
                                     <ModalFooter>
                                         {rsvpSuccess && <p className="text-success text-sm w-full text-center">{rsvpSuccess}</p>}

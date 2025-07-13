@@ -13,6 +13,7 @@ import { Image } from "@heroui/image";
 import { Tooltip } from "@heroui/tooltip";
 import { Spinner } from "@heroui/spinner";
 import { Chip } from "@heroui/chip";
+import { Input } from '@heroui/input';
 import { Divider } from "@heroui/divider";
 import { User } from "@heroui/user";
 import { parseCalendarEvent, parseRSVPEvent } from '@/lib/fetchers';
@@ -22,6 +23,11 @@ import { formatEventDate, getAvatarUrl } from '@/lib/utils';
 const LocationIcon = (props: any) => (
     <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" fill="currentColor" />
+    </svg>
+);
+const SearchIcon = (props: any) => (
+    <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
+        <path d="M11.5 21a9.5 9.5 0 100-19 9.5 9.5 0 000 19zM22 22l-2-2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
     </svg>
 );
 
@@ -39,8 +45,9 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
     const [error, setError] = useState<string>("");
     const [rsvps, setRsvps] = useState<any[]>([]);
     const [viewOnlyRsvps, setViewOnlyRsvps] = useState<boolean>(false);
-
     const [isRsvping, setIsRsvping] = useState(false);
+    const [hashtagInput, setHashtagInput] = useState('');
+    const [activeHashtags, setActiveHashtags] = useState<string[]>([]);
 
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const { isOpen, onOpen, onClose: originalOnClose } = useDisclosure();
@@ -48,6 +55,25 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
     const [isFetchingRsvps, setIsFetchingRsvps] = useState(false);
     const [fetchRsvpsError, setFetchRsvpsError] = useState<string | null>(null);
     const [isRsvpPopoverOpen, setIsRsvpPopoverOpen] = useState(false);
+
+
+    const handleAddHashtag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Add hashtag on "Enter" key press
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent form submission
+            const newHashtag = hashtagInput.trim().toLowerCase();
+
+            // Add to the list if it's not empty and not already included
+            if (newHashtag && !activeHashtags.includes(newHashtag)) {
+                setActiveHashtags(prev => [...prev, newHashtag]);
+            }
+            // Clear the input field
+            setHashtagInput('');
+        }
+    };
+    const handleRemoveHashtag = (tagToRemove: string) => {
+        setActiveHashtags(prev => prev.filter(tag => tag !== tagToRemove));
+    };
 
     const onClose = () => {
         originalOnClose();
@@ -104,7 +130,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                     const parsed = rawEvents.map(parseRSVPEvent);
                     setRsvps(parsed);
                 }
-                try{
+                try {
                     await fetchRSVPs(selectedEvent?.id, callback)
                 } catch (err) {
                     setFetchRsvpsError("Could not retrieve RSVPs for this event.");
@@ -126,12 +152,12 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
 
                 if (isUserView && viewingPubkey) {
                     if (!viewOnlyRsvps) {
-                        await fetchUserEvents(viewingPubkey, callback);
+                        await fetchUserEvents(viewingPubkey, callback, activeHashtags);
                     } else {
-                        await fetchUserRSVPEvents(viewingPubkey, callback);
+                        await fetchUserRSVPEvents(viewingPubkey, callback, activeHashtags);
                     }
                 } else {
-                    await fetchAllEvents(setEvents);
+                    await fetchAllEvents(setEvents, activeHashtags);
                 }
             } catch (err) {
                 console.error("Failed during event fetch or processing:", err);
@@ -141,7 +167,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
             }
         };
         loadAndParseEvents();
-    }, [isUserView, viewingPubkey, viewOnlyRsvps]);
+    }, [isUserView, viewingPubkey, viewOnlyRsvps, activeHashtags]);
 
     const handleCardPress = (event: any) => {
         setSelectedEvent(event);
@@ -158,7 +184,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
         )
     }
 
-    if (loading) {
+    if (loading && activeHashtags.length === 0) {
         return (
             <div className="flex flex-col mb-6 p-4 items-center min-h-screen">
                 <TitleComponent />
@@ -187,7 +213,37 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
     return (
         <div className="container mx-auto p-4 sm:p-8">
             <TitleComponent />
-            {events && events.length > 0 ? (
+            <div className="mb-8 w-full max-w-xl mx-auto flex flex-col gap-4">
+                <Input
+                    placeholder="Type a hashtag and press Enter..."
+                    value={hashtagInput}
+                    onValueChange={setHashtagInput}
+                    onKeyDown={handleAddHashtag}
+                    aria-label="Hashtag search input"
+                />
+                {activeHashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        <span className="text-sm text-default-500 self-center">Filtering by:</span>
+                        {activeHashtags.map(tag => (
+                            <Chip
+                                key={tag}
+                                onClose={() => handleRemoveHashtag(tag)}
+                                variant="flat"
+                                color="primary"
+                            >
+                                #{tag}
+                            </Chip>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {loading && (
+                <div className="flex justify-center my-4">
+                    <Spinner label="Searching..." size="sm" color="primary" />
+                </div>
+            )}
+            {!loading && events && events.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {events.map((event) => (
                         <Card shadow="lg" key={event.id} isHoverable isPressable onPress={() => handleCardPress(event)} className="w-full">
@@ -230,10 +286,15 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                         </Card>
                     ))}
                 </div>
-            ) : (
+            ) : !loading && (
                 <div className="text-center p-12 border-2 border-dashed rounded-lg">
                     <h2 className="text-2xl font-semibold text-foreground">No Events Found</h2>
-                    <p className="text-default-500 mt-2">There are no calendar events on the connected relays. Why not create one?</p>
+                    <p className="text-default-500 mt-2">
+                        {activeHashtags.length > 0
+                            ? "No events match the selected hashtags. Try removing some filters."
+                            : "There are no calendar events on the connected relays. Why not create one?"
+                        }
+                    </p>
                 </div>
             )}
             <Modal

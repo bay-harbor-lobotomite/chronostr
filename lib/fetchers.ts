@@ -1,5 +1,5 @@
-import {Client, Filter, Kind, KindStandard, Event, EventId, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions, SingleLetterTag, Alphabet} from "@rust-nostr/nostr-sdk";
-import {relays, eventKinds, rsvpKind} from "./constants";
+import { Client, Filter, Kind, KindStandard, Event, EventId, Timestamp, PublicKey, Duration, loadWasmAsync, Keys, SubscribeAutoCloseOptions, SingleLetterTag, Alphabet } from "@rust-nostr/nostr-sdk";
+import { relays, eventKinds, rsvpKind } from "./constants";
 
 
 export async function fetchRSVPs(eventId: string, callback: any) {
@@ -20,8 +20,8 @@ export async function fetchRSVPs(eventId: string, callback: any) {
     callback(eventsVecJson);
 }
 
-export async function fetchUserRSVPEvents(pubkey: string, callback: any) {
-    await loadWasmAsync();  
+export async function fetchUserRSVPEvents(pubkey: string, callback: any, activeHashtags: string[] = []) {
+    await loadWasmAsync();
     let client = new Client();
     for (const relay of relays) {
         await client.addRelay(relay)
@@ -29,6 +29,9 @@ export async function fetchUserRSVPEvents(pubkey: string, callback: any) {
     await client.connect();
     //get rsvps
     let filterRsvp = new Filter().kind(new Kind(rsvpKind)).author(PublicKey.parse(pubkey))
+    if (activeHashtags.length > 0) {
+        filterRsvp = filterRsvp.hashtags(activeHashtags);
+    }
     const events1 = await client.fetchEvents(filterRsvp, Duration.fromSecs(10));
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
@@ -44,7 +47,7 @@ export async function fetchUserRSVPEvents(pubkey: string, callback: any) {
     callback(eventsVecJson2)
 }
 
-export async function fetchAllEvents(callback: (events: any) => void) {
+export async function fetchAllEvents(callback: (events: any) => void, activeHashtags: string[] = []) {
     await loadWasmAsync();
 
     let client = new Client();
@@ -55,7 +58,11 @@ export async function fetchAllEvents(callback: (events: any) => void) {
     await client.connect();
 
     //get calendar events
-    let filter1 = new Filter().kinds(eventKinds.map((kind) => new Kind(kind))).since(Timestamp.fromSecs(Date.now() / 1000 - 60 * 60 * 24 * 30)).limit(20); // last 30 days
+    let filter1 = new Filter().kinds(eventKinds.map((kind) => new Kind(kind))).since(Timestamp.fromSecs(Date.now() / 1000 - 60 * 60 * 24 * 30))
+    if (activeHashtags.length > 0) {
+        filter1 = filter1.hashtags(activeHashtags);
+    }
+    filter1 = filter1.limit(100);
     const events1 = await client.fetchEvents(filter1, Duration.fromSecs(10));
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
@@ -71,13 +78,15 @@ export async function fetchAllEvents(callback: (events: any) => void) {
             //here, the date has to be ahead of today
             return new Date(event.start) > new Date();
         }
-        return true; 
+        return true;
     });
-
+    //sort it by earliest to latest start date
+    eventsVecJson = sortEventsByStartDate(eventsVecJson);
     callback(eventsVecJson);
 }
 
-export async function fetchUserEvents(pubkey: string, callback: (events: any) => void) {
+
+export async function fetchUserEvents(pubkey: string, callback: (events: any) => void, activeHashtags: string[] = []) {
     await loadWasmAsync();
 
     let client = new Client();
@@ -89,6 +98,9 @@ export async function fetchUserEvents(pubkey: string, callback: (events: any) =>
 
     //get calendar events
     let filter1 = new Filter().kinds(eventKinds.map((kind) => new Kind(kind))).author(PublicKey.parse(pubkey))
+    if (activeHashtags.length > 0) {
+        filter1 = filter1.hashtags(activeHashtags);
+    }
     const events1 = await client.fetchEvents(filter1, Duration.fromSecs(10));
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
@@ -107,7 +119,7 @@ export async function fetchUserCalendars(pubkey: string, callback: (events: any)
     let filter = new Filter()
         .kind(new Kind(31924))
         .author(PublicKey.parse(pubkey));
-        
+
     const events = await client.fetchEvents(filter, Duration.fromSecs(10));
     let eventsVec = events.toVec();
     let eventsVecAsJson = eventsVec.map((event) => JSON.parse(event.asJson()));
@@ -140,7 +152,7 @@ export async function fetchEventsForCalendar(calendar: any, callback: (events: a
         callback([]);
         return;
     }
-        
+
     const filter = new Filter().kinds(eventKinds.map((kind) => new Kind(kind))).customTags(SingleLetterTag.lowercase(Alphabet.D), dIdentifiers).limit(20)
 
     const events = await client.fetchEvents(filter, Duration.fromSecs(10));
@@ -149,7 +161,25 @@ export async function fetchEventsForCalendar(calendar: any, callback: (events: a
     callback(eventsVecAsJson);
 }
 
+// fetching related utils
 
+const sortEventsByStartDate = (events: any[]) => {
+    return events.sort((a: any, b: any) => {
+        if (a.kind === 31923 && b.kind === 31923) {
+            return new Date(parseInt(a.start, 10) * 1000).getTime() - new Date(parseInt(b.start, 10) * 1000).getTime();
+        }
+        if (a.kind === 31922 && b.kind === 31922) {
+            return new Date(a.start).getTime() - new Date(b.start).getTime();
+        }
+        if (a.kind === 31923 && b.kind === 31922) {
+            return new Date(parseInt(a.start, 10) * 1000).getTime() - new Date(b.start).getTime();
+        }
+        if (a.kind === 31922 && b.kind === 31923) {
+            return new Date(a.start).getTime() - new Date(parseInt(b.start, 10) * 1000).getTime();
+        }
+        return 0;
+    })
+}
 
 export function parseCalendarEvent(eventJson: any) {
     const parsed = {
@@ -170,13 +200,13 @@ export function parseCalendarEvent(eventJson: any) {
     };
 
     if (!eventJson.tags || !Array.isArray(eventJson.tags)) {
-        return parsed; 
+        return parsed;
     }
 
     const tagMap = new Map<string, any>();
     for (const tag of eventJson.tags) {
         const key = tag[0];
-        const value = tag.slice(1); 
+        const value = tag.slice(1);
 
         if (tagMap.has(key)) {
             const existing = tagMap.get(key);
@@ -197,7 +227,7 @@ export function parseCalendarEvent(eventJson: any) {
     parsed.end = tagMap.get('end')?.[0] || null;
     parsed.location = tagMap.get('location')?.[0] || '';
     parsed.image = tagMap.get('image')?.[0] || '';
-    
+
     const hashtags = tagMap.get('t');
     if (hashtags) {
         parsed.hashtags = hashtags.flat();
@@ -218,7 +248,7 @@ export function parseCalendarEvent(eventJson: any) {
                 if (pTag.length >= 2) {
                     participant.role = pTag[pTag.length - 1];
                 }
-                
+
                 parsed.participants.push(participant);
             }
         }
@@ -238,13 +268,13 @@ export function parseCalendarListEvent(eventJson: any) {
     };
 
     if (!eventJson.tags || !Array.isArray(eventJson.tags)) {
-        return parsed; 
+        return parsed;
     }
 
     const tagMap = new Map<string, any>();
     for (const tag of eventJson.tags) {
         const key = tag[0];
-        const value = tag.slice(1); 
+        const value = tag.slice(1);
 
         if (tagMap.has(key)) {
             const existing = tagMap.get(key);
@@ -260,7 +290,7 @@ export function parseCalendarListEvent(eventJson: any) {
 
     parsed.d = tagMap.get('d')?.[0] || '';
     parsed.title = tagMap.get('title')?.[0] || 'Untitled Calendar';
-    
+
     const aTagData = tagMap.get('a');
     if (aTagData) {
         const aTagsArray = (aTagData.length > 0 && Array.isArray(aTagData[0]))
@@ -307,7 +337,7 @@ export function parseRSVPEvent(eventJson: any) {
     }
 
     parsed.e = tagMap.get('e') || '';
-    parsed.a = tagMap.get('a') || ''; 
+    parsed.a = tagMap.get('a') || '';
     parsed.status = tagMap.get('status') || '';
     parsed.fb = tagMap.get('fb') || '';
     parsed.p = tagMap.get('p') || '';
@@ -317,11 +347,11 @@ export function parseRSVPEvent(eventJson: any) {
 }
 
 export const getSHA256Hash = async (input: string) => {
-  const textAsBuffer = new TextEncoder().encode(input);
-  const hashBuffer = await window.crypto.subtle.digest("SHA-256", textAsBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hash = hashArray
-    .map((item) => item.toString(16).padStart(2, "0"))
-    .join("");
-  return hash;
+    const textAsBuffer = new TextEncoder().encode(input);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", textAsBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hash = hashArray
+        .map((item) => item.toString(16).padStart(2, "0"))
+        .join("");
+    return hash;
 };

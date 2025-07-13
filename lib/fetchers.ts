@@ -225,6 +225,7 @@ export function parseCalendarEvent(eventJson: any) {
     parsed.summary = tagMap.get('summary')?.[0] || parsed.content;
     parsed.start = tagMap.get('start')?.[0] || null;
     parsed.end = tagMap.get('end')?.[0] || null;
+    // console.log(typeof parsed.start, parsed.kind)
     parsed.location = tagMap.get('location')?.[0] || '';
     parsed.image = tagMap.get('image')?.[0] || '';
 

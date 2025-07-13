@@ -10,6 +10,7 @@ import {
     CardBody,
     CardHeader
 } from "@heroui/card";
+import InteractiveCalendarModal from './InteractiveCalendarModal';
 import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 import { Accordion, AccordionItem } from "@heroui/accordion";
 import { Button } from "@heroui/button";
@@ -38,9 +39,6 @@ const UserCalendarsList = ({ loggedInUserPubkey }: UserCalendarsListProps) => {
     const [error, setError] = useState<string>("");
 
     const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
-    const [eventsInCalendar, setEventsInCalendar] = useState<any[]>([]);
-    const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
-
     const { isOpen, onOpen, onClose } = useDisclosure();
 
     // Fetch the list of calendars on component mount
@@ -63,27 +61,6 @@ const UserCalendarsList = ({ loggedInUserPubkey }: UserCalendarsListProps) => {
         };
         loadCalendars();
     }, [loggedInUserPubkey]);
-
-    useEffect(() => {
-        const loadEvents = async () => {
-            if (!selectedCalendar) return;
-
-            try {
-                setIsLoadingDetails(true);
-                setEventsInCalendar([]);
-                await fetchEventsForCalendar(selectedCalendar, (rawEvents) => {
-                    const parsed = rawEvents.map(parseCalendarEvent);
-                    console.log(parsed)
-                    setEventsInCalendar(parsed);
-                });
-            } catch (err) {
-                console.error("Failed to fetch events for calendar:", err);
-            } finally {
-                setIsLoadingDetails(false);
-            }
-        };
-        loadEvents();
-    }, [selectedCalendar]);
 
 
     const handleCalendarPress = (calendar: any) => {
@@ -124,62 +101,11 @@ const UserCalendarsList = ({ loggedInUserPubkey }: UserCalendarsListProps) => {
                 </CardBody>
             </Card>
 
-            <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
-                <ModalContent>
-                    {(close) => (
-                        <>
-                            <ModalHeader className="flex flex-col gap-1 text-2xl font-bold">
-                                {selectedCalendar?.title}
-                            </ModalHeader>
-                            <ModalBody>
-                                {isLoadingDetails ? (
-                                    <div className="flex justify-center items-center h-64">
-                                        <Spinner label="Loading calendar events..." />
-                                    </div>
-                                ) : (
-                                    <Accordion selectionMode="multiple" variant="splitted">
-                                        {eventsInCalendar.map(event => (
-                                            <AccordionItem key={event.id} aria-label={event.title} title={event.title}>
-                                                <div className="flex flex-col gap-4 p-2">
-                                                    <p className="text-primary font-semibold">{formatEventDate(event)}</p>
-                                                    <p className="text-default-700">{event.summary}</p>
-                                                    {event.location && (
-                                                        <div className="flex items-center text-sm text-default-500">
-                                                            <LocationIcon className="mr-2" />
-                                                            <span className="truncate">{event.location}</span>
-                                                        </div>
-                                                    )}
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {event.hashtags.map((tag: any, index: any) => (
-                                                            <Chip key={index} color="default" variant="flat" size="sm">#{tag}</Chip>
-                                                        ))}
-                                                    </div>
-                                                    {event.participants && event.participants.length > 0 && (
-                                                        <>
-                                                            <Divider className="my-2" />
-                                                            <h4 className="font-semibold text-foreground">Participants</h4>
-                                                            <div className="flex flex-col gap-3">
-                                                                {event.participants.map((p: any) => (
-                                                                    <User key={p.pubkey} name={p.pubkey.substring(0, 10) + '...'} description={p.role || 'Attendee'} avatarProps={{ src: getAvatarUrl(p.pubkey) }}/>
-                                                                ))}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </AccordionItem>
-                                        ))}
-                                    </Accordion>
-                                )}
-                            </ModalBody>
-                            <ModalFooter>
-                                <Button color="primary" variant="light" onPress={close}>
-                                    Close
-                                </Button>
-                            </ModalFooter>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
+            <InteractiveCalendarModal
+                isOpen={isOpen}
+                onClose={onClose}
+                calendar={selectedCalendar}
+            />
         </>
     );
 };

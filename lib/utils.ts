@@ -14,3 +14,11 @@ export const formatEventDate = (event: any) => {
         }
     return "Invalid date";
 };
+
+
+export function convertToMilitaryTime(utc: number) {
+  const date = new Date(utc);
+  const hours = date.getUTCHours().toString().padStart(2, '0');
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}

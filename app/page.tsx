@@ -3,7 +3,7 @@ import {User} from "@heroui/user"
 import SWHandler from 'smart-widget-handler'
 import { useEffect, useState } from "react";
 import {Tab, Tabs} from "@heroui/tabs";
-import { fetchAllEvents, fetchUserEvents } from "@/lib/utils";
+import { fetchAllEvents, fetchUserEvents } from "@/lib/fetchers";
 import CalendarEventList from "@/components/CalendarEventList";
 import CreateCalendarEventForm from "@/components/CreateCalendarEventForm";
 import Calendars from "@/components/Calendars";

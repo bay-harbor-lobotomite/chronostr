@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { getSHA256Hash } from '@/lib/utils';
+import { getSHA256Hash } from '@/lib/fetchers';
 import {
     Card,
     CardBody,
     CardFooter,
     CardHeader
 } from "@heroui/card";
-import { fetchRSVPs, fetchAllEvents, fetchUserEvents, fetchUserRSVPEvents } from '@/lib/utils';
+import { fetchRSVPs, fetchAllEvents, fetchUserEvents, fetchUserRSVPEvents } from '@/lib/fetchers';
 import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
@@ -15,36 +15,10 @@ import { Spinner } from "@heroui/spinner";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
 import { User } from "@heroui/user";
-import { parseCalendarEvent, parseRSVPEvent } from '@/lib/utils';
+import { parseCalendarEvent, parseRSVPEvent } from '@/lib/fetchers';
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
 import { Switch } from "@heroui/switch";
-import { user } from '@heroui/theme';
-
-//keeping this deterministic because I dont want to make another user metadata request to relays and slow down.
-const getAvatarUrl = (pubkey: string) => `https://api.boringavatars.com/beam/120/${pubkey}?colors=264653,2a9d8f,e9c46a,f4a261,e76f51`;
-
-
-const formatEventDate = (event: any) => {
-    if (!event.start) return "Date not specified";
-
-    // Kind 31923: Time-based event (Unix timestamp)
-    if (event.kind === 31923) {
-        const startDate = new Date(parseInt(event.start, 10) * 1000);
-        return startDate.toLocaleString(undefined, {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        });
-    }
-    // Kind 31922: Date-based event (YYYY-MM-DD)
-    if (event.kind === 31922) {
-        return `All-day on ${event.start}`;
-    }
-    return "Invalid date";
-};
-
+import { formatEventDate, getAvatarUrl } from '@/lib/utils';
 const LocationIcon = (props: any) => (
     <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" fill="currentColor" />

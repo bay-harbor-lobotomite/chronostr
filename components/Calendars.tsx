@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { fetchUserRSVPEvents, getSHA256Hash, parseCalendarEvent } from '@/lib/fetchers';
+import { fetchUserRSVPEvents, getSHA256Hash, parseCalendarEvent} from '@/lib/fetchers';
 import { Button } from "@heroui/button";
 import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
 import { Card, CardBody, CardHeader } from "@heroui/card";
@@ -96,12 +96,10 @@ const Calendars = ({ loggedInUserPubkey, publishNostrEvent }: CreateCalendarFrom
             };
 
             await publishNostrEvent(finalCalendarEvent);
-            setSuccessMessage("Successfully created the calendar!");
             setCalendarTitle("");
             setSelectedEventIds([]);
         } catch (err: any) {
             console.error("Failed to publish calendar event:", err);
-            setError(err.message || "An unknown error occurred while creating the calendar.");
         } finally {
             setIsSubmitting(false);
         }

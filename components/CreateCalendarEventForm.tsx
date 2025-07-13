@@ -15,8 +15,6 @@ import { Button } from '@heroui/button';
 
 const CreateCalendarEventForm = ({ pubkey, publishNostrEvent }: { pubkey: string, publishNostrEvent: any }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState('');
     const [participants, setParticipants] = useState<{ pubkey: string; role: string }[]>([]);
     const [participantInput, setParticipantInput] = useState({ pubkey: '', role: '' });
 
@@ -72,8 +70,6 @@ const CreateCalendarEventForm = ({ pubkey, publishNostrEvent }: { pubkey: string
     const handleSubmit = async (e: any) => {
         e.preventDefault();
         setIsSubmitting(true);
-        setError(null);
-        setSuccessMessage('');
 
         try {
             const tags = [];
@@ -136,11 +132,9 @@ const CreateCalendarEventForm = ({ pubkey, publishNostrEvent }: { pubkey: string
 
             publishNostrEvent(eventData);
 
-            setSuccessMessage(`Event created successfully! You can view it on your calendar.`);
 
         } catch (err: any) {
             console.error("Failed to publish event:", err);
-            setError(err || "An unknown error occurred.");
         } finally {
             setIsSubmitting(false);
         }
@@ -317,8 +311,6 @@ const CreateCalendarEventForm = ({ pubkey, publishNostrEvent }: { pubkey: string
                     >
                         {isSubmitting ? 'Publishing Event...' : 'Create Event'}
                     </Button>
-                    {error && <p className="text-danger mt-4 text-sm">{error}</p>}
-                    {successMessage && <p className="text-success mt-4 text-sm">{successMessage}</p>}
                 </CardFooter>
             </form>
         </Card>

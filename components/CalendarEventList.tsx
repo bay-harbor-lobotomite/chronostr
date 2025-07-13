@@ -41,8 +41,6 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
     const [viewOnlyRsvps, setViewOnlyRsvps] = useState<boolean>(false);
 
     const [isRsvping, setIsRsvping] = useState(false);
-    const [rsvpError, setRsvpError] = useState<string | null>(null);
-    const [rsvpSuccess, setRsvpSuccess] = useState<string>('');
 
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const { isOpen, onOpen, onClose: originalOnClose } = useDisclosure();
@@ -54,20 +52,15 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
     const onClose = () => {
         originalOnClose();
         setTimeout(() => {
-            setRsvpError(null);
-            setRsvpSuccess('');
         }, 300);
     };
 
     const handleRsvpSubmit = async (status: 'accepted' | 'declined' | 'tentative') => {
         if (!selectedEvent) {
-            setRsvpError("No event selected to RSVP to.");
             return;
         }
 
         setIsRsvping(true);
-        setRsvpError(null);
-        setRsvpSuccess('');
 
         try {
             const tags = [];
@@ -92,14 +85,12 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                 ...rsvpEventObject
             };
             await publishNostrEvent(finalRsvpEvent);
-            setRsvpSuccess(`Successfully RSVP'd as '${status}'!`);
             setTimeout(() => {
                 onClose();
             }, 2000);
 
         } catch (err: any) {
             console.error("Failed to publish RSVP event:", err);
-            setRsvpError(err.message || "An unknown error occurred while sending RSVP.");
         } finally {
             setIsRsvping(false);
         }
@@ -107,13 +98,19 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
 
     useEffect(() => {
         const loadRSVPEvents = async () => {
+            setIsFetchingRsvps(true);
             if (selectedEvent) {
                 const callback = (rawEvents: any) => {
                     const parsed = rawEvents.map(parseRSVPEvent);
                     setRsvps(parsed);
                 }
-                await fetchRSVPs(selectedEvent?.id, callback)
+                try{
+                    await fetchRSVPs(selectedEvent?.id, callback)
+                } catch (err) {
+                    setFetchRsvpsError("Could not retrieve RSVPs for this event.");
+                }
             }
+            setIsFetchingRsvps(false);
         }
         loadRSVPEvents();
     }, [selectedEvent]);
@@ -134,7 +131,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                         await fetchUserRSVPEvents(viewingPubkey, callback);
                     }
                 } else {
-                    await fetchAllEvents(callback);
+                    await fetchAllEvents(setEvents);
                 }
             } catch (err) {
                 console.error("Failed during event fetch or processing:", err);
@@ -304,9 +301,7 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                                         )}
                                     </ModalBody>
                                     <ModalFooter>
-                                        {rsvpSuccess && <p className="text-success text-sm w-full text-center">{rsvpSuccess}</p>}
-                                        {rsvpError && <p className="text-danger text-sm w-full text-center">{rsvpError}</p>}
-                                        {!isRsvping && !rsvpSuccess && !rsvpError && (
+                                        {!isRsvping && (
                                             <>
                                                 <Button color="default" variant="light" onPress={onClose}>
                                                     Close
@@ -366,7 +361,6 @@ const CalendarEventList = ({ isUserView, viewingPubkey, loggedInUserPubkey, publ
                                                 )}
                                             </>
                                         )}
-                                        {/* Show a single spinner in the footer while submitting */}
                                         {isRsvping && <Spinner label="Sending RSVP..." color="primary" />}
                                     </ModalFooter>
                                 </>

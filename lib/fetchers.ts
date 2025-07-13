@@ -59,6 +59,21 @@ export async function fetchAllEvents(callback: (events: any) => void) {
     const events1 = await client.fetchEvents(filter1, Duration.fromSecs(10));
     let eventsVec = events1.toVec();
     let eventsVecJson = eventsVec.map((event) => JSON.parse(event.asJson()))
+    //only return the events whose start /time is in the future
+    //doing this client side now but explore filters
+    eventsVecJson = eventsVecJson.map((event) => parseCalendarEvent(event));
+    eventsVecJson = eventsVecJson.filter((event: any) => {
+        if (event.kind === 31923) {
+            const startDate = new Date(parseInt(event.start, 10) * 1000);
+            return startDate > new Date();
+        }
+        if (event.kind === 31922) {
+            //here, the date has to be ahead of today
+            return new Date(event.start) > new Date();
+        }
+        return true; 
+    });
+
     callback(eventsVecJson);
 }
 

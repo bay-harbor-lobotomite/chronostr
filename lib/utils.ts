@@ -4,8 +4,13 @@ export const formatEventDate = (event: any) => {
     if (!event.start) return "Date not specified";
     if (event.kind === 31923) {
         const startDate = new Date(parseInt(event.start, 10) * 1000);
-        return startDate.toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        const endDate = new Date(parseInt(event.end, 10) * 1000);
+        return startDate.toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + " - "
+            + (endDate.toLocaleString(undefined, {month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) === 'Invalid Date' ? " " : endDate.toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }));
     }
-    if (event.kind === 31922) return `All-day on ${event.start}`;
+    if (event.kind === 31922) 
+        {
+            return `${event.start} - ${event.end ? event.end : "Ongoing"}`;
+        }
     return "Invalid date";
 };

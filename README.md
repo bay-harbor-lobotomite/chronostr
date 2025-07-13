@@ -11,6 +11,8 @@ This project leverages Nostr's NIP-52 for calendar events.
     -   **Date-based Events:** For all-day or multi-day occasions (e.g., conferences, vacations).
 -   **Interactive RSVP System:** Attend, decline, or mark yourself as tentative for any public event. All RSVPs are themselves Nostr events, making them open and verifiable.
 -   **Personal Event Dashboard:** A dedicated view for users to see a list of all the events they have created.
+-   **Search Events by Hashtags**: Quickly find the events you want by filtering using hashtags
+-   **Calendar Management**: Create and manage calendars out of your RSVPd events with an intuitive and easy interface.  
 -   **Attendee Management:** Event organizers can instantly view a list of all RSVPs and their statuses directly from the event card.
 
 ## Tech Stack
@@ -18,6 +20,7 @@ This project leverages Nostr's NIP-52 for calendar events.
 -   **Framework:** React/ Next.js
 -   **UI Library:** NextUI
 -   **Styling:** Tailwind CSS
+-   **Calendar**: react-calendar
 -   **Nostr Integration:** smart-widget-handler from YakiHonne, @rust-nostr/nostr-sdk (via WebAssembly)
 -   **Language:** TypeScript
 
@@ -31,6 +34,7 @@ The application is designed around two primary user journeys: the **Event Attend
 2.  **Explore:** They click on an event card that looks interesting. A modal window appears, showing rich details like the event image, full description, date, time, and location.
 3.  **RSVP:** If the user is not the event's creator, they see buttons to respond. They click **"Accept"**.
 4.  **Confirm:** A Nostr event of `kind: 31925` (RSVP) is created, signed, and published to the network. The UI provides instant feedback on the successful RSVP.
+5.  **Calendars**: Organize thematic calendars out of RSVPd events and view and manage them using a react-calendar interface.
 
 ### 2. As an Event Organizer
 
@@ -58,14 +62,14 @@ To get a local copy up and running, follow these simple steps.
 
 2.  **Install dependencies:**
     ```sh
-    npm install
+    pnpm install
     # or
     yarn install
     ```
 
 3.  **Run the development server:**
     ```sh
-    npm run dev
+    pnpm run dev
     # or
     yarn dev
     ```

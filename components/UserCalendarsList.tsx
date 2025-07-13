@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
     fetchUserCalendars,
-    fetchEventsForCalendar,
-    parseCalendarEvent,
     parseCalendarListEvent
 } from '@/lib/fetchers';
 import {
@@ -11,16 +9,9 @@ import {
     CardHeader
 } from "@heroui/card";
 import InteractiveCalendarModal from './InteractiveCalendarModal';
-import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
-import { Accordion, AccordionItem } from "@heroui/accordion";
-import { Button } from "@heroui/button";
+import { useDisclosure } from "@heroui/modal";
 import { Spinner } from "@heroui/spinner";
 import { Divider } from "@heroui/divider";
-import { User } from "@heroui/user";
-import { Chip } from "@heroui/chip";
-import { Image } from "@heroui/image";
-import { Tooltip } from "@heroui/tooltip";
-import { formatEventDate, getAvatarUrl } from '@/lib/utils';
 
 
 interface UserCalendarsListProps {
@@ -96,7 +87,7 @@ const UserCalendarsList = ({ loggedInUserPubkey }: UserCalendarsListProps) => {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-default-500 text-center">You haven't created any calendars yet.</p>
+                        <p className="text-default-500 text-center">You havent created any calendars yet.</p>
                     )}
                 </CardBody>
             </Card>

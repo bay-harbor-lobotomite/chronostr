@@ -3,6 +3,11 @@
 **Chronostr** is a YakiHonne miniapp that reimagines event scheduling and discovery through the power of the Nostr protocol. It provides a censorship-resistant, decentralized platform where users can create, share, discover, and RSVP to events without relying on a central server.
 This project leverages Nostr's NIP-52 for calendar events.
 
+<img width="300" height="337" alt="image" src="https://github.com/user-attachments/assets/c1be1893-e156-4ccd-b431-c1f415657817" />
+<img width="300" height="337" alt="Screenshot 2025-07-13 200923" src="https://github.com/user-attachments/assets/5c06f9e4-35e1-46bc-9791-206946b71d7e" />
+<img width="300" height="337" alt="Screenshot 2025-07-13 200910" src="https://github.com/user-attachments/assets/b9fe4e40-5d34-477b-8d07-1c19d719ab5d" />
+
+
 ## Features
 
 -   **Decentralized Event Feed:** Discover public events posted by users across the Nostr network.
